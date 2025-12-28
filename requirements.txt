@@ -1,0 +1,15 @@
+streamlit
+pandas
+numpy
+xgboost
+shap
+scikit-learn
+plotly
+joblib
+python-dotenv
+google-generativeai
+anthropic  # if using Claude API
+transformers  # for local models like Llama, Mistral
+torch  # for running local models
+accelerate  # for model optimization
+python-dotenv

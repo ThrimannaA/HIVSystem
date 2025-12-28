@@ -1,0 +1,396 @@
+{
+    "feature_definitions": {
+        "q1": {
+            "question": "How old are you?",
+            "options": {"1": "12 years old or younger", "2": "65 years old or older", "3": "45–54 years", 
+                      "4": "55–64 years", "5": "35-44 years", "6": "13-24 years", "7": "25-34 years"},
+            "risk_direction": "neutral",
+            "category": "demographics",
+            "explanation": "Age influences HIV risk: highest among 25–34 years, followed by 13–24 years, and decreases in older and younger age groups."
+        },    
+        "q2": {
+            "question": "What is your sex?",
+            "options": {"1": "Female", "2": "Male"},
+            "risk_direction": "neutral",
+            "category": "demographics",
+            "explanation": "Influences risk patterns, particularly MSM (men who have sex with men)"
+        },
+        "raceeth": {
+            "question": "Race/Ethnicity (computed)",
+            "options": {"1": "Am Indian/Alaska Native", "2": "Asian", "3": "Black/African American", 
+                      "4": "Native Hawaiian/Other PI", "5": "White", "6": "Hispanic/Latino", 
+                      "7": "Multiple - Hispanic", "8": "Multiple - Non-Hispanic"},
+            "risk_direction": "neutral",
+            "category": "demographics",
+            "explanation": "Race and ethnicity reflect structural and access-related disparities; differences in HIV rates are due to systemic factors not individual risk behaviors"
+        },
+        "q65": {
+            "question": "Are you transgender?",
+            "options": {"1": "No", "2": "Yes", "3": "Not sure", "4": "Don't know"},
+            "risk_direction": "positive",
+            "category": "identity",
+            "explanation": "Transgender youth face structural barriers, discrimination, and healthcare access challenges that can increase HIV vulnerability"
+        },
+        "QN56": {
+            "question": "Ever had sexual intercourse",
+            "options": {"1": "Yes", "2": "No"},
+            "risk_direction": "positive",
+            "category": "sexual_behavior",
+            "explanation": "Fundamental exposure risk factor"
+        },
+        "QN57": {
+            "question": "Had sexual intercourse before age 18",
+            "options": {"1": "Yes", "2": "No"},
+            "risk_direction": "positive",
+            "category": "sexual_behavior",
+            "explanation": "Early sexual debut associated with higher risk"
+        },
+        "QN58": {
+            "question": "Had sexual intercourse with 4 or more persons",
+            "options": {"1": "Yes", "2": "No"},
+            "risk_direction": "positive",
+            "category": "sexual_behavior",
+            "explanation": "CDC PrEP eligibility criterion"
+        },
+        "QN59": {
+            "question": "Currently sexually active (past 3 months)",
+            "options": {"1": "Yes", "2": "No"},
+            "risk_direction": "positive",
+            "category": "sexual_behavior",
+            "explanation": "Ongoing exposure window"
+        },
+        "QN60": {
+            "question": "Drank alcohol or used drugs before last sexual intercourse",
+            "options": {"1": "Yes", "2": "No"},
+            "risk_direction": "positive",
+            "category": "sexual_behavior",
+            "explanation": "Impaired judgment during sex"
+        },
+        "QN61": {
+            "question": "Used condom during last sexual intercourse",
+            "options": {"1": "Yes", "2": "No"},
+            "risk_direction": "negative",
+            "category": "sexual_behavior",
+            "explanation": "Primary barrier protection against HIV"
+        },
+        "QN62": {
+            "question": "Used birth control pills before last sexual intercourse",
+            "options": {"1": "Yes", "2": "No"},
+            "risk_direction": "neutral",
+            "category": "sexual_behavior",
+            "explanation": "Hormonal contraception; does not provide HIV/STI protection"
+        },
+        "q63": {
+            "question": "During your life, with whom have you had sexual contact?",
+            "options": {"1": "Never had sexual contact", "2": "Females", "3": "Males", "4": "Both"},
+            "risk_direction": "positive",
+            "category": "sexual_behavior",
+            "explanation": "Sexual contact with male partners (for both male and female respondents) is associated with higher HIV transmission risk due to biological factors in male-to-male sexual contact"
+        },
+        "q64": {
+            "question": "Which best describes you?",
+            "options": {"1": "Heterosexual", "2": "Gay/Lesbian", "3": "Bisexual", "4": "Other", "5": "Questioning"},
+            "risk_direction": "positive",
+            "category": "sexual_behavior",
+            "explanation": "LGBQ+ (Lesbian/Gay/Bisexual/Questioning) youth experience disproportionate stigma and structural barriers that can increase vulnerability to HIV in certain settings"
+        },
+        "q60": {
+            "question": "Did you drink alcohol or use drugs before last sexual intercourse the last time?",
+            "options": {"1": "Never had sex", "2": "Yes", "3": "No"},
+            "risk_direction": "positive",
+            "category": "sexual_behavior",
+            "explanation": "Raw frequency of substance-impaired sex"
+        },
+        "q58": {
+            "question": "During your life, with how many people have you had sexual intercourse?",
+            "options": {"1": "Never had sex", "2": "1 person", "3": "2 people", "4": "3 people", "5": "4 people", "6": "5 people", "7": "6 or more"},
+            "risk_direction": "positive",
+            "category": "sexual_behavior",
+            "explanation": "Graduated partner count (more accurate than binary)"
+        },
+        "q59": {
+            "question": "During past 3 months, with how many people did you have sexual intercourse?",
+            "options": {"1": "Never", "2": "No recent", "3": "1", "4": "2", "5": "3", "6": "4", "7": "5", "8": "6 or more"},
+            "risk_direction": "positive",
+            "category": "sexual_behavior",
+            "explanation": "Recent partner count — strongest current risk indicator"
+        },
+        "q61": {
+            "question": "Last time you had sexual intercourse, did you or partner use a condom?",
+            "options": {"1": "Never had sex", "2": "Yes", "3": "No"},
+            "risk_direction": "negative",
+            "category": "sexual_behavior",
+            "explanation": "Raw condom consistency"
+        },
+        "q62": {
+            "question": "Last intercourse, what method used to prevent pregnancy?",
+            "options": {"1": "Never had sex", "2": "None", "3": "Pills", "4": "Condom", "5": "IUD/implant", "6": "Shot/patch/ring", "7": "Other", "8": "Not sure"},
+            "risk_direction": "neutral",
+            "category": "sexual_behavior",
+            "explanation": "Contraception method. The risk is **positive** if the answer is \"None\", **negative** if \"Condom\", and **neutral** for hormonal/other methods (as they don't affect HIV risk)"
+        },
+        "qnbcnone": {
+            "question": "Did not use any method to prevent pregnancy last sex (among sexually active)",
+            "options": {"1": "Yes", "2": "No"},
+            "risk_direction": "positive",
+            "category": "sexual_behavior",
+            "explanation": "No contraception = major risk factor"
+        },
+        "qndualbc": {
+            "question": "Used condom + hormonal method last sex",
+            "options": {"1": "Yes", "2": "No"},
+            "risk_direction": "negative",
+            "category": "sexual_behavior",
+            "explanation": "Dual protection = strongest behavioral shield"
+        },   
+        "q82": {
+            "question": "During the past 12 months,Tested for STD other than HIV",
+            "options": {"1": "Yes", "2": "No", "3": "Not sure","99": "Prefer not to answer"},
+            "risk_direction": "positive",
+            "category": "sexual_behavior",
+            "explanation": "Recent STD = proxy for unprotected sex"
+        },
+        "QN43": {
+            "question": "Currently binge drinking",
+            "options": {"1": "Yes", "2": "No"},
+            "risk_direction": "positive",
+            "category": "substance_use",
+            "explanation": "Binge drinking strongly linked to unprotected sex"
+        },
+        "QN48": {
+            "question": "Currently used marijuana",
+            "options": {"1": "Yes", "2": "No"},
+            "risk_direction": "positive",
+            "category": "substance_use",
+            "explanation": "Marijuana use can impair decision-making about sexual safety"
+        },
+        "QN46": {
+            "question": "Ever used marijuana",
+            "options": {"1": "Yes", "2": "No"},
+            "risk_direction": "positive",
+            "category": "substance_use",
+            "explanation": "Lifetime use indicates risk trajectory"
+        },
+        "q52": {
+            "question": "how many times have you used heroin?",
+            "options": {"1": "Never used heroin", "2": "1 or 2 times", "3": "3 to 9 times", "4": "10 to 19 times", "5": "20 to 39 times", "6": "40 or more times"},
+            "risk_direction": "positive",
+            "category": "substance_use",
+            "explanation": "Heroin use = extreme risk (injection), dramatically increases HIV risk"
+        },
+        "q44": {
+            "question": "Largest number of drinks in a row within a couple of hours(past 30 days)",
+            "options": {"1": "did not drink alcohol during the past 30 days ", "2": "1 or 2 drinks", "3": "3 drinks", "4": "4 drinks", "5": "5 drinks", "6": "6 or 7 drinks", "7": "8 or 9 drinks", "8": "10 or more drinks"},
+            "risk_direction": "positive",
+            "category": "substance_use",
+            "explanation": "Heavy episodic drinking strongly correlates with sexual risk-taking"
+        },
+        "q55": {
+            "question": "how many times have you used a needle to inject any illegal drug into your body?",
+            "options": {"1": "Never injected any illegal drug", "2": "1 time", "3": "2 or more times"},
+            "risk_direction": "positive",
+            "category": "substance_use",
+            "explanation": "Injection drug use is the highest non-sexual risk factor; exponentially increases HIV risk"
+        },
+        "q21": {
+            "question": "Sexual dating or going out with force you to do sexual things that you did not want to do during past 12 months",
+            "options": {"1": "did not date or go out with anyone during the past 12 months", "2": "0 times", "3": "1 time", "4": "2 or 3 times", "5": "4 or 5 times", "6": "6 or more times"},
+            "risk_direction": "positive",
+            "category": "violence",
+            "explanation": "Coercion makes it difficult to negotiate condom use and safer sexual practices"
+        },
+        "q20": {
+            "question": "During the past 12 months, how many times did anyone force you to do sexual things that you did not want to do?",
+            "options": {"1": "0 times", "2": "1 time", "3": "2 or 3 times", "4": "4 or 5 times", "5": "6 or more times"},
+            "risk_direction": "positive",
+            "category": "violence",
+            "explanation": "Trauma increases vulnerability"
+        },
+        "q22": {
+            "question": "During the past 12 months, how many times did someone you were dating or going out with physically hurt you on purpose?",
+            "options": {"1": "did not date or go out with anyone during the past 12 months ", "2": "0 times", "3": "1 times","4": "2 or 3 times", "5": "4 or 5 times", "6": "6 or more times"},
+            "risk_direction": "positive",
+            "category": "violence",
+            "explanation": "Abuse cycle affects sexual safety"
+        },
+        "q19": {
+            "question": "Ever physically forced to have sexual intercourse when you did not want to?",
+            "options": {"1": "Yes", "2": "No"},
+            "risk_direction": "positive",
+            "category": "violence",
+            "explanation": "Forced sex = major HIV vulnerability factor"
+        },
+        "q30": {
+            "question": "Suicide attempt required medical treatment",
+            "options": {"1": "No attempt", "2": "Yes", "3": "No"},
+            "risk_direction": "positive",
+            "category": "mental_health",
+            "explanation": "Severe trauma indicator"
+        },
+        "q26": {
+            "question": "Felt sad or hopeless almost every day for 2+ weeks",
+            "options": {"1": "Yes", "2": "No"},
+            "risk_direction": "positive",
+            "category": "mental_health",
+            "explanation": "Depression linked to risk-taking"
+        },
+        "q27": {
+            "question": "Seriously considered attempting suicide",
+            "options": {"1": "Yes", "2": "No"},
+            "risk_direction": "positive",
+            "category": "mental_health",
+            "explanation": "Suicidal ideation = high distress"
+        },
+        "q29": {
+            "question": "How many times did you actually attempt suicide? ",
+            "options": {"1": "0 times", "2": "1 time", "3": "2 or 3 times", "4": "4 or 5 times", "5": "6 or more times"},
+            "risk_direction": "positive",
+            "category": "mental_health",
+            "explanation": "Attempt = severe mental health crisis"
+        },
+        "q89": {
+            "question": "How often have people in authority spoken to you in a disrespectful way",
+            "options": {"1": "Never", "2": "Rarely", "3": "Sometimes", "4": "Most of the time", "5": "Always","99": "Prefer not to answer"},
+            "risk_direction": "positive",
+            "category": "mental_health",
+            "explanation": "Verbal disrespect from authority affects mental wellbeing"
+        },
+        "q84": {
+            "question": "How often was your mental health not good?(past 30 days)",
+            "options": {"1": "Never", "2": "Rarely", "3": "Sometimes", "4": "Most of the time", "5": "Always"},
+            "risk_direction": "positive",
+            "category": "mental_health",
+            "explanation": "Poor mental health = risk co-factor"
+        },
+        "q85": {
+            "question": "Hours of sleep on night",
+            "options": {"1": "4 or less", "2": "5", "3": "6", "4": "7", "5": "8", "6": "9", "7": "10+"},
+            "risk_direction": "positive",
+            "category": "mental_health",
+            "explanation": "Sleep deprivation impairs decision-making"
+        },
+        "q80": {
+            "question": "Social media use frequency",
+            "options": {"1": "Don't use", "2": "A few times a month", "3": "About once a week", "4": "A few times a week", "5": "About once a day", "6": "Several times a day", "7": "About once an hour", "8": "More than once an hour"},
+            "risk_direction": "positive",
+            "category": "social_factors",
+            "explanation": "Heavy use linked to risky online behaviors"
+        },
+        "q86": {
+            "question": "Current housing stability",
+            "options": {"1": "Stable permanent housing", "2": "Temporarily staying with others", "3": "In a shelter or emergency housing", "4": "Temporary accommodation (motel/hotel)", "5": "Unstable/irregular housing", "6": "No regular place to stay"},
+            "risk_direction": "positive",
+            "category": "social_factors",
+            "explanation": "Housing instability increases vulnerability to high-risk situations"
+        },
+        "QN102": {
+            "question": "Family member in jail, prison, or detention",
+            "options": {"1": "Yes", "2": "No","99": "Prefer not to answer"},
+            "risk_direction": "positive",
+            "category": "social_factors",
+            "explanation": "Family incarceration can increase stress and reduce support systems"
+        },
+        "q66": {
+            "question": "How do you describe your weight?",
+            "options": {"1": "Very underweight", "2": "Slightly underweight", "3": "About the right weight", "4": "Slightly overweight", "5": "Very overweight","99": "Prefer not to answer"},
+            "risk_direction": "positive",
+            "category": "mental_health",
+            "explanation": "Body image issues linked to risk behaviors"
+        },
+        "QN106": {
+            "question": "Difficulty concentrating/remembering",
+            "options": {"1": "Yes", "2": "No","99": "Prefer not to answer"},
+            "risk_direction": "positive",
+            "category": "mental_health",
+            "explanation": "Cognitive issues affect decision-making"
+        },   
+        "q81": {
+            "question": "HIV testing history and result",
+            "options": {"1": "Tested with negative result ", "2": "No, I have not tested", "3": "Not sure about my testing history"},
+            "risk_direction": "negative",
+            "category": "protective",
+            "explanation": "A confirmed negative HIV test result is protective. Those who have never tested or have positive/unknown results show different risk patterns"
+        },
+        "q103": {
+            "question": "Feel connected to people in your community/workplace/school",
+            "options": {"1": "Strongly agree", "2": "Agree", "3": "Not sure", "4": "Disagree", "5": "Strongly disagree","99": "Prefer not to answer"},
+            "risk_direction": "negative",
+            "category": "protective",
+            "explanation": "Strong social connections provide protective support networks and reducing exposure to high-risk situations"
+        },
+        "q104": {
+            "question": "Do trusted contacts know where you are?",
+            "options": {"1": "Never", "2": "Rarely", "3": "Sometimes", "4": "Most of the time", "5": "Always","99": "Prefer not to answer"},
+            "risk_direction": "negative",
+            "category": "protective",
+            "explanation": "Having trusted people aware of your location provides safety support"
+        },
+        "q76": {
+            "question": "During the past 7 days, physically active for 60+ minutes",
+            "options": {"1": "0 days", "2": "1 day", "3": "2 days", "4": "3 days", "5": "4 days", "6": "5 days", "7": "6 days", "8": "7 days"},
+            "risk_direction": "negative",
+            "category": "protective",
+            "explanation": "Regular physical activity is a general protective factor linked to better mental health and self-care; Physical health = behavioral protection"
+        },
+        "q78": {
+            "question": "Participate in organized group/community activities",
+            "options": {"1": "0 activities", "2": "1 activities", "3": "2 activities", "4": "3 or more teams","99": "Prefer not to answer"},
+            "risk_direction": "negative",
+            "category": "protective",
+            "explanation": "Community involvement provides social connection and positive engagement"
+        },
+        "q69": {
+            "question": "Ate fruit past 7 days",
+            "options": {"1": "I did not eat fruit during the past 7 days", "2": "1 to 3 times", "3": "4 to 6 times", "4": "1 time per day", "5": "2 times per day", "6": "3 times per day", "7": "4 or more times per day"},
+            "risk_direction": "neutral",
+            "category": "lifestyle",
+            "explanation": "Healthy eating = self-care"
+        },
+        "q70": {
+            "question": "Ate green salad past 7 days",
+            "options": {"1": "I did not eat green salad during the past 7 days", "2": "1 to 3 times", "3": "4 to 6 times", "4": "1 time per day", "5": "2 times per day", "6": "3 times per day", "7": "4 or more times per day"},
+            "risk_direction": "neutral",
+            "category": "lifestyle",
+            "explanation": "Nutrition = wellness indicator"
+        },
+        "q74": {
+            "question": "Drank soda/pop past 7 days",
+            "options": {"1": "I did not drink soda/pop during the past 7 days", "2": "1 to 3 times", "3": "4 to 6 times", "4": "1 time per day", "5": "2 times per day", "6": "3 times per day", "7": "4 or more times per day"},
+            "risk_direction": "positive",
+            "category": "lifestyle",
+            "explanation": "High sugary drink intake is a proxy for poor self-care/health habits, which correlates with other risk-taking behaviors"
+        },
+        "q71": {
+            "question": "During the past 7 days, how many times did you eat potatoes?",
+            "options": {"1": "I did not eat potatoes during the past 7 days", "2": "1 to 3 times", "3": "4 to 6 times", "4": "1 time per day", "5": "2 times per day", "6": "3 times per day", "7": "4 or more times per day"},
+            "risk_direction": "neutral",
+            "category": "lifestyle",
+            "explanation": "Potato consumption reflects general dietary patterns but has no direct association with HIV risk or protective sexual behaviors"
+        },
+        "q72": {
+            "question": "During the past 7 days, how many times did you eat carrots?",
+            "options": {"1": "I did not eat carrots during the past 7 days", "2": "1 to 3 times", "3": "4 to 6 times", "4": "1 time per day", "5": "2 times per day", "6": "3 times per day", "7": "4 or more times per day"},
+            "risk_direction": "neutral",
+            "category": "lifestyle",
+            "explanation": "Regular vegetable intake such as carrots is a proxy for healthier lifestyle and better self-care habits"
+        },
+        "q73": {
+            "question": "During the past 7 days, how many times did you eat other vegetables? ",
+            "options": {"1": "I did not eat other vegetables during the past 7 days", "2": "1 to 3 times", "3": "4 to 6 times", "4": "1 time per day", "5": "2 times per day", "6": "3 times per day", "7": "4 or more times per day"},
+            "risk_direction": "neutral",
+            "category": "lifestyle",
+            "explanation": "Frequent consumption of vegetables is a protective lifestyle indicator reflecting better health awareness and lower likelihood of associated high-risk behaviors"
+        }
+ 
+    },
+    "categories": {
+        "demographics": ["q1", "q2", "raceeth", "q65"],
+        "sexual_behavior": ["QN56", "QN57", "QN58", "QN59", "QN60", "QN61", "QN62", "q63", "q64", "q60", "q58", "q59", "q61", "q62", "qnbcnone", "qndualbc", "q82"],
+        "substance_use": ["QN43", "QN48", "QN46", "q52", "q44", "q55"],
+        "violence": ["q21", "q20", "q22", "q19"],
+        "mental_health": ["q30", "q26", "q27", "q29", "q89", "q84", "q85", "q66", "QN106"],
+        "social_factors": ["q80", "q86", "QN102"],
+        "protective": ["q81", "q103", "q104", "q76", "q78"],
+        "lifestyle": ["q69", "q70", "q74", "q71", "q72", "q73"]
+    }
+}
