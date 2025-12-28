@@ -25,40 +25,75 @@ export default function App() {
     'Tamil (Sri Lanka)': { code: 'ta', culture: 'Sri Lankan' },
   };
 
+  // useEffect(() => {
+  //   HIVApi.getSchema()
+  //     .then(data => {
+  //       setSchema(data);
+  //       let initialData = {};
+  //       Object.keys(data.feature_definitions).forEach(key => {
+  //         initialData[key] = 1; // Default to first option
+  //       });
+  //       setFormData(initialData);
+  //     })
+  //     .catch(err =>
+  //       Alert.alert('Error', 'Could not load schema from backend.'),
+  //     );
+  // }, []);
+
   useEffect(() => {
     HIVApi.getSchema()
       .then(data => {
-        setSchema(data);
+        // 1. Convert the dictionary to an array so we can sort it
+        const featuresArray = Object.entries(data.feature_definitions);
+
+        // 2. Sort the array based on the 'category' field (exactly like Streamlit)
+        featuresArray.sort((a, b) => {
+          const catA = a[1].category.toUpperCase();
+          const catB = b[1].category.toUpperCase();
+          if (catA < catB) return -1;
+          if (catA > catB) return 1;
+          return 0;
+        });
+
+        // 3. Store the sorted array in the state
+        setSchema({
+          ...data,
+          sorted_features: featuresArray,
+        });
+
+        // 4. Initialize default values
         let initialData = {};
-        Object.keys(data.feature_definitions).forEach(key => {
-          initialData[key] = 1; // Default to first option
+        featuresArray.forEach(([key]) => {
+          initialData[key] = 1;
         });
         setFormData(initialData);
       })
-      .catch(err =>
-        Alert.alert('Error', 'Could not load schema from backend.'),
-      );
+      .catch(err => Alert.alert('Error', 'Could not load schema.'));
   }, []);
 
   const runAssessment = async () => {
     setLoading(true);
+
+    // 1. Get the codes based on the UI selection (English/Sinhala/Tamil)
     const selected = languageCultureMap[prefLanguage];
 
-    // Merge feature data with language preferences
-    const payload = {
-      ...formData,
-      preferred_language: selected.code,
-      preferred_culture: selected.culture,
+    // 2. Combine the questions AND the language settings into one object
+    const finalPayload = {
+      data: formData, // Your Q1, Q2, etc.
+      preferred_language: selected.code, // "si" or "ta"
+      preferred_culture: selected.culture, // "Sri Lankan"
     };
 
     try {
-      const response = await HIVApi.assessRisk(payload);
+      // 3. Send the complete package to Python
+      const response = await HIVApi.assessRisk(
+        finalPayload.data,
+        finalPayload.preferred_language,
+        finalPayload.preferred_culture,
+      );
       setResult(response);
     } catch (e) {
-      Alert.alert(
-        'Error',
-        'Connection failed. Check if Python backend is running.',
-      );
+      Alert.alert('Error', 'Translation failed or Backend unreachable');
     }
     setLoading(false);
   };
@@ -93,8 +128,9 @@ export default function App() {
 
           {/* QUESTIONS SECTION */}
           <Text style={styles.sectionHeader}>👤 User Profile Simulation</Text>
-          {Object.entries(schema.feature_definitions).map(([key, info]) => (
+          {schema.sorted_features.map(([key, info]) => (
             <View key={key} style={styles.questionCard}>
+              <Text style={styles.categoryLabel}>{info.category}</Text>
               <Text style={styles.questionText}>{info.question}</Text>
               <View style={styles.pickerContainer}>
                 <Picker
