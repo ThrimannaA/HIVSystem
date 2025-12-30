@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+
 import {
   View,
   ScrollView,
@@ -8,11 +9,14 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+
 import { Picker } from '@react-native-picker/picker';
+import RNPrint from 'react-native-print';
 import { HIVApi } from './src/api/client';
 import { RiskTrendScreen } from './src/components/RiskTrendScreen';
 
 export default function App() {
+  const [resultPage, setResultPage] = useState(1); // 1: Prediction, 2: Plan, 3: Trend
   const [schema, setSchema] = useState(null);
   const [formData, setFormData] = useState({});
   const [prefLanguage, setPrefLanguage] = useState('English');
@@ -20,41 +24,57 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const languageCultureMap = {
     English: { code: 'en', culture: 'English-speaking' },
+
     'Sinhala (Sri Lanka)': { code: 'si', culture: 'Sri Lankan' },
+
     'Tamil (Sri Lanka)': { code: 'ta', culture: 'Sri Lankan' },
   };
 
   useEffect(() => {
     HIVApi.getSchema()
+
       .then(data => {
         setSchema(data);
+
         let initialData = {};
-        Object.keys(data.feature_definitions).forEach(
-          key => (initialData[key] = 1),
-        );
+
+        // Use the feature_definitions keys to set every single question to -1
+
+        Object.keys(data.feature_definitions).forEach(key => {
+          if (!key.endsWith('_missing')) {
+            initialData[key] = -1;
+          }
+        });
+
         setFormData(initialData);
       })
-      .catch(err => Alert.alert('Error', 'Backend not reachable'));
+
+      .catch(err => {
+        console.error('Schema fetch error:', err);
+        Alert.alert('Error', 'Backend not reachable');
+      });
   }, []);
 
-  // const runAssessment = async () => {
-  //   setLoading(true);
-  //   const selected = languageCultureMap[prefLanguage];
-  //   try {
-  //     const response = await HIVApi.assessRisk(
-  //       formData,
-  //       selected.code,
-  //       selected.culture,
-  //     );
-  //     setResult(response);
-  //   } catch (e) {
-  //     Alert.alert('Error', 'Assessment failed. Check backend console.');
-  //   }
-  //   setLoading(false);
-  // };
   const runAssessment = async () => {
+    // Check if any value is still -1
+
+    const unanswered = Object.keys(formData).filter(
+      key => formData[key] === -1,
+    );
+
+    if (unanswered.length > 0) {
+      Alert.alert(
+        'Missing Answers',
+        `Please answer all questions before proceeding. (${unanswered.length} remaining)`,
+      );
+
+      return; // Stop the function here
+    }
+
     setLoading(true);
+
     const selected = languageCultureMap[prefLanguage];
+
     try {
       const response = await HIVApi.assessRisk(
         formData,
@@ -64,24 +84,76 @@ export default function App() {
 
       // The backend returns { success: true, result: { ... } }
       // So we use response (which is already response.result from client.js)
+
       setResult(response);
 
       // Extract the data carefully for saving
+
       const score = response.risk_prediction.risk_score;
       const level = response.risk_prediction.risk_level;
       const factors = response.risk_prediction.top_factors;
 
       // Call save
+
       await HIVApi.saveAssessment('research_user_001', score, level, factors);
     } catch (e) {
       console.error('Frontend Error:', e);
+
       // Only alert if the assessment actually failed
+
       Alert.alert(
         'Error',
         'Something went wrong. Check if data was saved in Firebase.',
       );
     }
+
     setLoading(false);
+  };
+
+  const createPDF = async () => {
+    if (!result) return;
+
+    const htmlContent = `
+      <div style="padding: 20px; font-family: 'Helvetica';">
+        <h1 style="color: #2196F3; text-align: center;">HIV Behavioral Risk Assessment</h1>
+        <p style="text-align: center; color: #666;">Date: ${new Date().toLocaleDateString()}</p>
+        <hr/>
+        <div style="background-color: #f8f9fa; padding: 15px; border-radius: 10px; border: 1px solid #dee2e6;">
+          <h2>1. Assessment Summary</h2>
+          <p><strong>Risk Level:</strong> ${
+            result.risk_prediction.risk_level
+          }</p>
+          <p><strong>Clinical Note:</strong> This is a behavioral profile based on reported activities and is not a medical diagnosis.</p>
+        </div>
+        
+        <h2>2. Behavioral Intervention Plan</h2>
+        ${result.intervention_plan.personalized_plan
+          .map(
+            (item, i) => `
+          <div style="margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+            <p><strong>Phase ${i + 1}: ${item.name} (Weeks ${item.start_week}-${
+              item.end_week
+            })</strong></p>
+            <p>${item.description}</p>
+          </div>
+        `,
+          )
+          .join('')}
+        
+        <p style="margin-top: 40px; font-size: 10px; color: #999; text-align: center;">
+          Generated by HIV Prevention System - Clinical Research Tool
+        </p>
+      </div>
+    `;
+
+    try {
+      // This will open the native print dialog, where the user can select "Save as PDF"
+      await RNPrint.print({
+        html: htmlContent,
+      });
+    } catch (error) {
+      Alert.alert('Error', 'Failed to generate PDF');
+    }
   };
 
   if (!schema)
@@ -96,39 +168,77 @@ export default function App() {
       {!result ? (
         <View>
           <Text style={styles.mainTitle}>🔬 HIV Prevention Assessment</Text>
+
           <View style={styles.card}>
             <Text style={styles.sectionHeader}>🌍 Language & Culture</Text>
+
             <Picker
               selectedValue={prefLanguage}
               onValueChange={setPrefLanguage}
+              dropdownIconColor="#0e2e48ff"
             >
               {Object.keys(languageCultureMap).map(l => (
-                <Picker.Item key={l} label={l} value={l} />
+                <Picker.Item key={l} label={l} value={l} color="#2196F3" />
               ))}
             </Picker>
           </View>
+
           {Object.entries(schema.feature_definitions)
+
             .sort((a, b) =>
               (a[1].category || '').localeCompare(b[1].category || ''),
             )
+
             .filter(([key]) => !key.endsWith('_missing'))
+
             .map(([key, info]) => (
               <View key={key} style={styles.questionCard}>
                 <Text style={styles.questionText}>{info.question}</Text>
+
+                {/* We add a specific style here to make it look like a box */}
+
                 <View style={styles.pickerContainer}>
                   <Picker
-                    selectedValue={formData[key]?.toString()}
+                    selectedValue={
+                      formData[key] === -1 ? '-1' : formData[key]?.toString()
+                    }
                     onValueChange={val =>
                       setFormData({ ...formData, [key]: parseInt(val) })
                     }
+                    // This mode="dropdown" helps on Android to show the selection correctly
+
+                    mode="dropdown"
                   >
+                    <Picker.Item
+                      label="--- Select an Option ---"
+                      value="-1"
+                      color="#635f5fff"
+                    />
+
                     {Object.entries(info.options).map(([v, l]) => (
-                      <Picker.Item key={v} label={l} value={v} />
+                      <Picker.Item
+                        key={v}
+                        label={l}
+                        value={v.toString()}
+                        color="#2cb3ecff"
+                      />
                     ))}
                   </Picker>
                 </View>
               </View>
             ))}
+
+          <Text
+            style={{
+              textAlign: 'center',
+              color: '#6B7280',
+              marginBottom: 5,
+              fontSize: 13,
+            }}
+          >
+            {Object.values(formData).filter(v => v !== -1).length} of{' '}
+            {Object.keys(formData).length} answered
+          </Text>
 
           <TouchableOpacity style={styles.button} onPress={runAssessment}>
             <Text style={styles.buttonText}>RUN PERSONALIZED ASSESSMENT</Text>
@@ -138,151 +248,219 @@ export default function App() {
         /* --- DETAILED STYLE RESULTS --- */
 
         <View style={styles.resultView}>
-          <TouchableOpacity onPress={() => setResult(null)}>
+          <TouchableOpacity
+            onPress={() => {
+              setResult(null);
+              setResultPage(1);
+            }}
+          >
             <Text style={styles.backLink}>← Back</Text>
           </TouchableOpacity>
 
-          <Text style={styles.resultMainTitle}>
-            1. Risk Prediction & Explanation
-          </Text>
-
-          <View
-            style={[
-              styles.riskBanner,
-
-              { backgroundColor: result.risk_prediction.color },
-            ]}
-          >
-            <Text style={styles.riskLevel}>
-              {result.risk_prediction.risk_level}
-            </Text>
-
-            <Text style={styles.riskDescription}>
-              {result.risk_prediction.description}
-            </Text>
-          </View>
-
-          <View style={styles.metricContainer}>
-            <View style={styles.metricBox}>
-              <Text style={styles.mLabel}>Score</Text>
-
-              <Text style={styles.mValue}>
-                {result.risk_prediction.risk_score?.toFixed(1)}
-              </Text>
-            </View>
-
-            <View style={styles.metricBox}>
-              <Text style={styles.mLabel}>Confidence</Text>
-
-              <Text style={styles.mValue}>
-                {result.risk_prediction.confidence_percentage}
-              </Text>
-            </View>
-          </View>
-
-          <Text style={styles.subHeader}>🎯 Top Risk Factors</Text>
-
-          {result.risk_prediction.personalized_factors.map((f, i) => (
-            <View
-              key={i}
-              style={[
-                styles.factorCard,
-                {
-                  borderLeftColor: f.scoring_impact > 0 ? '#EF4444' : '#10B981',
-                },
-              ]}
-            >
-              <Text style={styles.factorQ}>{f.question}</Text>
-
-              <Text style={styles.factorA}>
-                Your Answer: {f.readable_value}
-              </Text>
-              <Text
-                style={[
-                  styles.factorI,
-                  { color: f.scoring_impact > 0 ? '#EF4444' : '#10B981' },
-                ]}
-              >
-                {f.interpretation} (+{f.scoring_impact} pts)
-              </Text>
-            </View>
-          ))}
-
-          <Text style={styles.resultMainTitle}>
-            2. True Personalized Intervention Plan
-          </Text>
-
-          <View style={styles.rationaleCard}>
-            <Text style={styles.ratTitle}>📅 Plan Rationale</Text>
-
-            <Text style={styles.ratText}>
-              • Focus Areas:{' '}
-              {result.intervention_plan.plan_summary.focus_areas.join(', ')}
-            </Text>
-
-            <Text style={styles.ratText}>
-              • Duration:{' '}
-              {result.intervention_plan.expected_outcomes.completion_timeline}
-            </Text>
-
-            <Text style={styles.ratText}>
-              • Basis:{' '}
-              {result.intervention_plan.plan_summary.timeline_calculation}
-            </Text>
-          </View>
-
-          <Text style={styles.subHeader}>💡 Recommended Interventions</Text>
-
-          {result.intervention_plan.personalized_plan.map((item, i) => (
-            <View key={i} style={styles.interventionCard}>
-              {/* Heading matches Streamlit: Title (Week X-Y) */}
-              <Text style={styles.intTitle}>
-                {i + 1}. {item.name} (Week {item.start_week}-{item.end_week})
-              </Text>
-
-              <Text style={styles.intMeta}>
-                Duration:{' '}
-                {item.duration_weeks || item.end_week - item.start_week + 1}{' '}
-                weeks {'\n'}
-                Intensity: {item.intensity} {'\n'}
-                Phase: {i + 1}/
-                {result.intervention_plan.personalized_plan.length}
-              </Text>
-
-              {/* Section 1: Main Goal */}
-              <Text style={styles.intLabel}>
-                🎯 Your main goal for these weeks:
-              </Text>
-              <Text style={styles.intGoalText}>{item.description}</Text>
-
-              {/* Section 2: Weekly Plan */}
-              <Text style={styles.intLabel}>📋 Your weekly plan:</Text>
-              <View style={styles.weeklyPlanBox}>
-                {item.simple_steps?.map((step, si) => (
-                  <Text key={si} style={styles.stepText}>
-                    • {step}
+          {/* PAGE 1: RISK PREDICTION */}
+          {resultPage === 1 && (
+            <View>
+              <View style={styles.disclaimerCard}>
+                <Text style={styles.disclaimerText}>
+                  <Text style={{ fontWeight: 'bold' }}>Clinical Note: </Text>
+                  This behavioral risk profile is designed to identify patterns
+                  associated with HIV transmission and is{' '}
+                  <Text style={{ fontWeight: 'bold' }}>
+                    not a medical diagnosis
                   </Text>
-                ))}
+                  . These results are intended for counseling and screening
+                  purposes only. Please speak with your healthcare provider to
+                  arrange a clinical HIV test for a definitive diagnosis.
+                </Text>
               </View>
 
-              {/* Section 3: Rationale */}
-              <Text style={styles.intLabel}>💡 Why this matters for you:</Text>
-              <Text style={styles.rationaleContent}>{item.user_rationale}</Text>
+              <Text style={styles.resultMainTitle}>
+                1. Risk Prediction & Explanation
+              </Text>
+
+              <View
+                style={[
+                  styles.riskBanner,
+                  { backgroundColor: result.risk_prediction.color },
+                ]}
+              >
+                <Text style={styles.riskLevel}>
+                  {result.risk_prediction.risk_level}
+                </Text>
+                <Text style={styles.riskDescription}>
+                  {result.risk_prediction.description}
+                </Text>
+              </View>
+
+              <View style={styles.metricContainer}>
+                <View style={styles.metricBox}>
+                  <Text style={styles.mLabel}>Assessment Level</Text>
+                  <Text style={styles.mValue}>
+                    {result.risk_prediction.risk_level}
+                  </Text>
+                </View>
+                <View style={styles.metricBox}>
+                  <Text style={styles.mLabel}>Analysis Strength</Text>
+                  <Text style={styles.mValue}>
+                    {parseInt(result.risk_prediction.confidence_percentage) > 80
+                      ? 'High'
+                      : 'Standard'}
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={styles.subHeader}>🎯 Top Risk Factors</Text>
+              {result.risk_prediction.personalized_factors.map((f, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.factorCard,
+                    {
+                      borderLeftColor:
+                        f.scoring_impact > 0 ? '#EF4444' : '#10B981',
+                    },
+                  ]}
+                >
+                  <Text style={styles.factorQ}>{f.question}</Text>
+                  <Text style={styles.factorA}>
+                    Your Answer: {f.readable_value}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.factorI,
+                      { color: f.scoring_impact > 0 ? '#EF4444' : '#10B981' },
+                    ]}
+                  >
+                    {f.interpretation} (+{f.scoring_impact} pts)
+                  </Text>
+                </View>
+              ))}
+
+              <TouchableOpacity
+                style={styles.button}
+                onPress={() => setResultPage(2)}
+              >
+                <Text style={styles.buttonText}>
+                  NEXT: VIEW INTERVENTION PLAN →
+                </Text>
+              </TouchableOpacity>
             </View>
-          ))}
+          )}
 
-          <Text style={styles.resultMainTitle}>
-            3. Longitudinal Risk Progress
-          </Text>
+          {/* PAGE 2: INTERVENTION PLAN */}
+          {resultPage === 2 && (
+            <View>
+              <Text style={styles.resultMainTitle}>
+                2. True Personalized Intervention Plan
+              </Text>
+              <View style={styles.rationaleCard}>
+                <Text style={styles.ratTitle}>📅 Plan Rationale</Text>
+                <Text style={styles.ratText}>
+                  • Focus Areas:{' '}
+                  {result.intervention_plan.plan_summary.focus_areas.join(', ')}
+                </Text>
+                <Text style={styles.ratText}>
+                  • Duration:{' '}
+                  {
+                    result.intervention_plan.expected_outcomes
+                      .completion_timeline
+                  }
+                </Text>
+                <Text style={styles.ratText}>
+                  • Basis:{' '}
+                  {result.intervention_plan.plan_summary.timeline_calculation}
+                </Text>
+              </View>
 
-          <RiskTrendScreen userId="research_user_001" />
+              <Text style={styles.subHeader}>💡 Recommended Interventions</Text>
+              {result.intervention_plan.personalized_plan.map((item, i) => (
+                <View key={i} style={styles.interventionCard}>
+                  <Text style={styles.intTitle}>
+                    {i + 1}. {item.name} (Week {item.start_week}-{item.end_week}
+                    )
+                  </Text>
+                  <Text style={styles.intMeta}>
+                    Duration:{' '}
+                    {item.duration_weeks || item.end_week - item.start_week + 1}{' '}
+                    weeks {'\n'}
+                    Intensity: {item.intensity} {'\n'}
+                    Phase: {i + 1}/
+                    {result.intervention_plan.personalized_plan.length}
+                  </Text>
+                  <Text style={styles.intLabel}>
+                    🎯 Your main goal for these weeks:
+                  </Text>
+                  <Text style={styles.intGoalText}>{item.description}</Text>
+                  <Text style={styles.intLabel}>📋 Your weekly plan:</Text>
+                  <View style={styles.weeklyPlanBox}>
+                    {item.simple_steps?.map((step, si) => (
+                      <Text key={si} style={styles.stepText}>
+                        • {step}
+                      </Text>
+                    ))}
+                  </View>
+                  <Text style={styles.intLabel}>
+                    💡 Why this matters for you:
+                  </Text>
+                  <Text style={styles.rationaleContent}>
+                    {item.user_rationale}
+                  </Text>
+                </View>
+              ))}
 
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() => setResult(null)}
-          >
-            <Text style={styles.buttonText}>RESTART ASSESSMENT</Text>
-          </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: '#6B7280' }]}
+                onPress={() => setResultPage(1)}
+              >
+                <Text style={styles.buttonText}>← BACK TO PREDICTION</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.button}
+                onPress={() => setResultPage(3)}
+              >
+                <Text style={styles.buttonText}>
+                  NEXT: VIEW RISK PROGRESS →
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* PAGE 3: TRENDS */}
+          {resultPage === 3 && (
+            <View>
+              <Text style={styles.resultMainTitle}>
+                3. Longitudinal Risk Progress
+              </Text>
+              <RiskTrendScreen userId="research_user_001" />
+
+              <TouchableOpacity
+                style={[
+                  styles.button,
+                  { backgroundColor: '#10B981', marginTop: 10 },
+                ]}
+                onPress={createPDF}
+              >
+                <Text style={styles.buttonText}>💾 SAVE AS PDF SUMMARY</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: '#6B7280' }]}
+                onPress={() => setResultPage(2)}
+              >
+                <Text style={styles.buttonText}>← BACK TO PLAN</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.button}
+                onPress={() => {
+                  setResult(null);
+                  setResultPage(1);
+                }}
+              >
+                <Text style={styles.buttonText}>RESTART ASSESSMENT</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       )}
 
@@ -322,6 +500,23 @@ const styles = StyleSheet.create({
 
   questionText: { fontSize: 15, color: '#333', fontWeight: '500' },
 
+  pickerContainer: {
+    marginTop: 10,
+    backgroundColor: '#f0f1eeff', // Light gray background to show it's an input
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    justifyContent: 'center',
+    height: 50,
+  },
+
+  sectionHeader: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#2196F3',
+  },
+
   button: {
     backgroundColor: '#2196F3',
     padding: 18,
@@ -336,6 +531,7 @@ const styles = StyleSheet.create({
 
   resultView: { marginTop: 10 },
   backLink: { color: '#2196F3', fontWeight: '600', marginBottom: 15 },
+
   resultMainTitle: {
     fontSize: 20,
     fontWeight: 'bold',
@@ -347,6 +543,7 @@ const styles = StyleSheet.create({
   riskBanner: { padding: 20, borderRadius: 12, marginBottom: 15 },
   riskLevel: { color: '#FFF', fontSize: 22, fontWeight: 'bold' },
   riskDescription: { color: '#FFF', fontSize: 14, marginTop: 5, opacity: 0.9 },
+
   metricContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -411,6 +608,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#2196F3', // Streamlit-like Blue
     elevation: 3, // For shadow
   },
+
   intLabel: {
     fontSize: 16,
     fontWeight: 'bold',
@@ -418,19 +616,39 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     color: '#1f2937',
   },
+
   weeklyPlanBox: {
     paddingLeft: 5,
   },
+
   stepText: {
     fontSize: 15,
     color: '#374151',
     lineHeight: 22,
     marginBottom: 10,
   },
+
   rationaleContent: {
     fontSize: 14,
     color: '#6b7280',
     fontStyle: 'italic',
     lineHeight: 20,
+  },
+
+  disclaimerCard: {
+    backgroundColor: '#EFF6FF', // Light medical blue
+    padding: 15,
+    borderRadius: 10,
+    borderLeftWidth: 5,
+    borderLeftColor: '#3B82F6', // Stronger blue accent
+    marginBottom: 20,
+    elevation: 1,
+  },
+
+  disclaimerText: {
+    fontSize: 14,
+    color: '#1E40AF', // Deep blue text for readability
+    lineHeight: 20,
+    textAlign: 'left',
   },
 });
