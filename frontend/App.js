@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { HIVApi } from './src/api/client';
+import { RiskTrendScreen } from './src/components/RiskTrendScreen';
 
 export default function App() {
   const [schema, setSchema] = useState(null);
@@ -36,6 +37,21 @@ export default function App() {
       .catch(err => Alert.alert('Error', 'Backend not reachable'));
   }, []);
 
+  // const runAssessment = async () => {
+  //   setLoading(true);
+  //   const selected = languageCultureMap[prefLanguage];
+  //   try {
+  //     const response = await HIVApi.assessRisk(
+  //       formData,
+  //       selected.code,
+  //       selected.culture,
+  //     );
+  //     setResult(response);
+  //   } catch (e) {
+  //     Alert.alert('Error', 'Assessment failed. Check backend console.');
+  //   }
+  //   setLoading(false);
+  // };
   const runAssessment = async () => {
     setLoading(true);
     const selected = languageCultureMap[prefLanguage];
@@ -45,9 +61,25 @@ export default function App() {
         selected.code,
         selected.culture,
       );
+
+      // The backend returns { success: true, result: { ... } }
+      // So we use response (which is already response.result from client.js)
       setResult(response);
+
+      // Extract the data carefully for saving
+      const score = response.risk_prediction.risk_score;
+      const level = response.risk_prediction.risk_level;
+      const factors = response.risk_prediction.top_factors;
+
+      // Call save
+      await HIVApi.saveAssessment('research_user_001', score, level, factors);
     } catch (e) {
-      Alert.alert('Error', 'Assessment failed. Check backend console.');
+      console.error('Frontend Error:', e);
+      // Only alert if the assessment actually failed
+      Alert.alert(
+        'Error',
+        'Something went wrong. Check if data was saved in Firebase.',
+      );
     }
     setLoading(false);
   };
@@ -238,6 +270,12 @@ export default function App() {
               <Text style={styles.rationaleContent}>{item.user_rationale}</Text>
             </View>
           ))}
+
+          <Text style={styles.resultMainTitle}>
+            3. Longitudinal Risk Progress
+          </Text>
+
+          <RiskTrendScreen userId="research_user_001" />
 
           <TouchableOpacity
             style={styles.button}

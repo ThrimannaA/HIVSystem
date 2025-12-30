@@ -9,6 +9,15 @@ import sys
 import os
 import json
 from typing import Dict, List, Any, Optional
+import firebase_admin
+from firebase_admin import credentials, firestore
+from datetime import datetime
+
+# 1. Initialize Firebase (Ensure serviceAccountKey.json is in your api folder)
+# You get this file from Firebase Console > Project Settings > Service Accounts
+cred = credentials.Certificate(os.path.join(os.path.dirname(__file__), "serviceAccountKey.json"))
+firebase_admin.initialize_app(cred)
+db = firestore.client()
 
 # Add backend to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -145,6 +154,40 @@ def get_supported_languages():
         ]
     }
 
+@app.post("/save_assessment")
+def save_assessment(payload: dict):
+    """Saves the risk score to Firebase for trend analysis"""
+    try:
+        user_id = payload.get("user_id", "default_user")
+        doc_ref = db.collection("users").document(user_id).collection("history").document()
+        
+        doc_ref.set({
+            "score": payload["score"],
+            "level": payload["level"],
+            "timestamp": datetime.now(),
+        })
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/history/{user_id}")
+def get_history(user_id: str):
+    """Retrieves all past scores for the line chart"""
+    try:
+        docs = db.collection("users").document(user_id).collection("history")\
+                 .order_by("timestamp", direction=firestore.Query.ASCENDING).stream()
+        
+        history = []
+        for doc in docs:
+            data = doc.to_dict()
+            history.append({
+                "value": data["score"],
+                "label": data["timestamp"].strftime("%b %d"), # Format: Dec 30
+            })
+        return history
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
