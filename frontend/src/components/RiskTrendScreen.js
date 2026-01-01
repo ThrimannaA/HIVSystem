@@ -9,6 +9,13 @@ import {
 import { LineChart } from 'react-native-gifted-charts';
 import { HIVApi } from '../api/client'; // Adjust path if necessary
 
+const RISK_COLORS = {
+  low: '#10B981', // Green
+  moderate: '#F59E0B', // Orange
+  high: '#EF4444', // Red
+  veryHigh: '#7F1D1D', // Dark Red
+};
+// Sample data structure for demonstration purposes
 export const RiskTrendScreen = ({ userId }) => {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,12 +24,28 @@ export const RiskTrendScreen = ({ userId }) => {
     const fetchHistory = async () => {
       try {
         const data = await HIVApi.getHistory(userId);
-        // Ensure data is formatted for the chart
-        const chartData = data.map(item => ({
-          value: item.value,
-          label: item.label,
-          dataPointText: item.value.toString(),
-        }));
+
+        // 2. LOGIC TO COLOR EACH DOT BASED ON THE SCORE
+        const chartData = data.map(item => {
+          let pointColor = RISK_COLORS.low;
+          const score = item.value;
+
+          // Adjust these numbers based on your specific backend point system
+          if (score >= 180) pointColor = RISK_COLORS.veryHigh;
+          else if (score >= 150) pointColor = RISK_COLORS.high;
+          else if (score >= 100) pointColor = RISK_COLORS.moderate;
+          else pointColor = RISK_COLORS.low;
+
+          return {
+            value: item.value,
+            label: item.label,
+            dataPointText: item.value.toString(),
+            // This is the specific property for Gifted Charts to color the dot
+            dataPointColor: pointColor,
+            focusedDataPointColor: pointColor,
+          };
+        });
+
         setHistory(chartData);
       } catch (error) {
         console.error('History fetch error:', error);
@@ -44,7 +67,7 @@ export const RiskTrendScreen = ({ userId }) => {
 
       {history.length > 1 ? (
         <View style={{ marginLeft: -20 }}>
-          <LineChart
+          {/* <LineChart
             data={history}
             height={180}
             width={Dimensions.get('window').width - 100}
@@ -65,6 +88,30 @@ export const RiskTrendScreen = ({ userId }) => {
             focusedDataPointColor="#FF5722"
             xAxisLabelTextStyle={{ fontSize: 10, color: '#666' }}
             yAxisTextStyle={{ fontSize: 10, color: '#666' }}
+          /> */}
+          <LineChart
+            data={history}
+            height={180}
+            width={Dimensions.get('window').width - 100}
+            initialSpacing={30}
+            spacing={50}
+            // Line color is neutral gray so the colored dots stand out
+            color="#150484ff"
+            thickness={3}
+            startFillColor="rgba(33, 150, 243, 0.3)"
+            endFillColor="rgba(33, 150, 243, 0.01)"
+            startOpacity={0.4}
+            endOpacity={0.1}
+            curved
+            noOfSections={4}
+            maxValue={400}
+            yAxisColor="#c6c6c6"
+            xAxisColor="#c6c6c6"
+            // Ensure the data points use the colors we assigned in the map
+            dataPointsHeight={15}
+            dataPointsWidth={15}
+            xAxisLabelTextStyle={{ fontSize: 12, color: '#666' }}
+            yAxisTextStyle={{ fontSize: 12, color: '#666' }}
           />
         </View>
       ) : (
@@ -77,18 +124,27 @@ export const RiskTrendScreen = ({ userId }) => {
         </View>
       )}
 
+      {/* 3. THE LEGEND SECTION */}
       <View style={styles.legend}>
         <View style={styles.legendItem}>
-          <View style={[styles.dot, { backgroundColor: '#10B981' }]} />
+          <View style={[styles.dot, { backgroundColor: RISK_COLORS.low }]} />
           <Text style={styles.legText}>Low</Text>
         </View>
         <View style={styles.legendItem}>
-          <View style={[styles.dot, { backgroundColor: '#F59E0B' }]} />
-          <Text style={styles.legText}>Mod</Text>
+          <View
+            style={[styles.dot, { backgroundColor: RISK_COLORS.moderate }]}
+          />
+          <Text style={styles.legText}>Moderate</Text>
         </View>
         <View style={styles.legendItem}>
-          <View style={[styles.dot, { backgroundColor: '#EF4444' }]} />
+          <View style={[styles.dot, { backgroundColor: RISK_COLORS.high }]} />
           <Text style={styles.legText}>High</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <View
+            style={[styles.dot, { backgroundColor: RISK_COLORS.veryHigh }]}
+          />
+          <Text style={styles.legText}>Very High</Text>
         </View>
       </View>
     </View>
@@ -132,6 +188,6 @@ const styles = StyleSheet.create({
     mx: 10,
     marginHorizontal: 10,
   },
-  dot: { width: 8, height: 8, borderRadius: 4, marginRight: 5 },
-  legText: { fontSize: 11, color: '#4B5563' },
+  dot: { width: 15, height: 15, borderRadius: 5, marginRight: 5 },
+  legText: { fontSize: 15, color: '#4B5563' },
 });
