@@ -8,6 +8,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  TextInput,
 } from 'react-native';
 
 import { Picker } from '@react-native-picker/picker';
@@ -16,12 +17,22 @@ import { HIVApi } from './src/api/client';
 import { RiskTrendScreen } from './src/components/RiskTrendScreen';
 
 export default function App() {
+  // --- NAVIGATION STATES ---
+  const [isWelcomeVisible, setIsWelcomeVisible] = useState(true); // Your new state
+  const [isLoginVisible, setIsLoginVisible] = useState(false); // Login Page
+  const [isDashboardVisible, setIsDashboardVisible] = useState(false); // Patient Dashboard
+  // --- NEW LOGIN STATES ---
+  const [patientIdInput, setPatientIdInput] = useState('');
+  const [accessCodeInput, setAccessCodeInput] = useState('');
+  const [currentUser, setCurrentUser] = useState({ name: '', id: '' });
+  // --- APP STATES ---
   const [resultPage, setResultPage] = useState(1); // 1: Prediction, 2: Plan, 3: Trend
   const [schema, setSchema] = useState(null);
   const [formData, setFormData] = useState({});
   const [prefLanguage, setPrefLanguage] = useState('English');
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
+
   const languageCultureMap = {
     English: { code: 'en', culture: 'English-speaking' },
 
@@ -30,6 +41,7 @@ export default function App() {
     'Tamil (Sri Lanka)': { code: 'ta', culture: 'Sri Lankan' },
   };
 
+  // Initial Data Fetch
   useEffect(() => {
     HIVApi.getSchema()
 
@@ -55,60 +67,95 @@ export default function App() {
       });
   }, []);
 
-  const runAssessment = async () => {
-    if (loading) return; // 1. Prevent double-clicks immediately
-    // Check if any value is still -1
+  // Splash Screen Timer
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsWelcomeVisible(false);
+      setIsLoginVisible(true);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, []);
 
-    const unanswered = Object.keys(formData).filter(
-      key => formData[key] === -1,
-    );
+  const handleLogin = async () => {
+    // 1. Double-check that this string is EXACTLY your ngrok URL
+    // 2. Ensure it has https:// at the start
+    const BASE_URL = 'https://keely-unresourceful-streamingly.ngrok-free.dev';
 
-    if (unanswered.length > 0) {
-      Alert.alert(
-        'Missing Answers',
-        `Please answer all questions before proceeding. (${unanswered.length} remaining)`,
-      );
-
-      return; // Stop the function here
+    if (!patientIdInput || !accessCodeInput) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
     }
 
-    // 2. Start Loading UI
+    setLoading(true);
+    try {
+      console.log('Sending Login Request to:', `${BASE_URL}/login`);
+
+      const response = await fetch(`${BASE_URL}/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          patient_id: patientIdInput,
+          access_code: accessCodeInput,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setCurrentUser({ name: data.name, id: data.patient_id });
+        setIsLoginVisible(false);
+        setIsDashboardVisible(true);
+      } else {
+        Alert.alert(
+          'Authentication Failed', // Title
+          data.detail ||
+            "We couldn't verify your credentials. Please try again.", // Message from Backend
+          [{ text: 'OK' }],
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        'Connection Error',
+        'Unable to reach the clinical server. Please ensure you are connected to the internet.',
+        [{ text: 'Try Again' }],
+      );
+    }
+    setLoading(false);
+  };
+
+  const runAssessment = async () => {
+    if (loading) return;
     setLoading(true);
 
     const selected = languageCultureMap[prefLanguage];
-
     try {
+      // Use your NGROK URL here
       const response = await HIVApi.assessRisk(
         formData,
         selected.code,
         selected.culture,
       );
 
-      // The backend returns { success: true, result: { ... } }
-      // So we use response (which is already response.result from client.js)
-
+      // Navigate to results
       setResult(response);
 
-      // Extract the data carefully for saving
+      setResultPage(1);
 
-      const score = response.risk_prediction.risk_score;
-      const level = response.risk_prediction.risk_level;
-      const factors = response.risk_prediction.top_factors;
+      // SAVE TO FIREBASE
+      const riskLevel = response.risk_prediction.risk_level; // e.g., "Low Risk"
 
-      // Call save
-
-      await HIVApi.saveAssessment('research_user_001', score, level, factors);
+      // Pass the CURRENT logged in user ID
+      await HIVApi.saveAssessment(currentUser.id, 0, riskLevel);
     } catch (e) {
-      console.error('Frontend Error:', e);
-
-      // Only alert if the assessment actually failed
-
+      console.error('Assessment Error:', e);
       Alert.alert(
-        'Error',
-        'Something went wrong. Check if data was saved in Firebase.',
+        'Assessment Failed',
+        'Please check your internet connection or server logs.',
       );
     }
-
     setLoading(false);
   };
 
@@ -165,11 +212,143 @@ export default function App() {
       </View>
     );
 
+  // --- SCREEN 1: SPLASH ---
+  if (isWelcomeVisible) {
+    return (
+      <View style={styles.welcomeContainer}>
+        <ActivityIndicator size="large" color="#2196F3" />
+
+        <Text style={styles.emojiTitle}>🎗️</Text>
+
+        <Text style={styles.welcomeTitle}>
+          HIV Risk Awareness and Prevention
+        </Text>
+
+        <Text style={styles.welcomeSubtitle}>
+          Behavioral Risk Identification and Personalized Support
+        </Text>
+        <Text></Text>
+        <Text style={styles.welcomeNote}>
+          <Text style={{ fontWeight: 'bold' }}>Important Note: </Text>
+          This system provides a personalized view of your HIV risk based on
+          your behaviors. This system does{' '}
+          <Text style={{ fontWeight: 'bold' }}>
+            not provide a medical diagnosis
+          </Text>{' '}
+          and is intended to support prevention and risk-reduction planning.
+          Clinical testing with a qualified healthcare provider is required to
+          determine HIV status.
+        </Text>
+      </View>
+    );
+  }
+
+  // 2. Only show the "Loading Parameters" if schema is still missing AFTER welcome screen
+  if (!schema) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#2196F3" />
+        <Text style={{ marginTop: 10 }}>Fetching Assessment Parameters...</Text>
+      </View>
+    );
+  }
+
+  // --- SCREEN 2: LOGIN ---
+  if (isLoginVisible) {
+    return (
+      <View style={styles.loginContainer}>
+        <Text style={styles.loginHeader}>Clinical Access</Text>
+        <Text style={styles.loginSub}>Please enter patient credentials</Text>
+
+        <TextInput
+          style={styles.input}
+          placeholder="Patient ID (e.g. PN-2024)"
+          placeholderTextColor="#999"
+          value={patientIdInput} // ADD THIS
+          onChangeText={setPatientIdInput} // ADD THIS
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Access Code"
+          secureTextEntry={true}
+          placeholderTextColor="#999"
+          value={accessCodeInput} // ADD THIS
+          onChangeText={setAccessCodeInput} // ADD THIS
+        />
+
+        <TouchableOpacity
+          style={styles.loginButton}
+          onPress={handleLogin} // CHANGE THIS from () => {...} to handleLogin
+        >
+          <Text style={styles.loginButtonText}>LOGIN</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // --- SCREEN 3: DASHBOARD ---
+  if (isDashboardVisible) {
+    return (
+      <ScrollView style={styles.dashboardContainer}>
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.dashWelcome}>Welcome,</Text>
+            <Text style={styles.dashName}>{currentUser.name || 'Patient'}</Text>
+          </View>
+          <View style={styles.notifBadge}>
+            <Text style={{ color: 'white', fontSize: 10 }}>1</Text>
+          </View>
+        </View>
+
+        <Text style={styles.dashSectionTitle}>Quick Actions</Text>
+        <View style={styles.quickActionGrid}>
+          <TouchableOpacity
+            style={styles.actionBox}
+            onPress={() => setIsDashboardVisible(false)}
+          >
+            <Text style={styles.actionEmoji}>📝</Text>
+            <Text style={styles.actionText}>New Assessment</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionBox}
+            onPress={() => {
+              // 1. Set the page to 3 (Trends)
+              setResultPage(3);
+              // 2. Set a placeholder result so the 'result' view triggers
+              // but include a flag to tell the app this is history mode
+              setResult({ isHistoryMode: true });
+              // 3. Hide dashboard to show the ScrollView content
+              setIsDashboardVisible(false);
+            }}
+          >
+            <Text style={styles.actionEmoji}>📊</Text>
+            <Text style={styles.actionText}>View Trends</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.infoCard}>
+          <Text style={styles.infoTitle}>Clinical Advisory</Text>
+          <Text style={styles.infoText}>
+            Your next biological screening is recommended in 3 months. Maintain
+            your current intervention plan.
+          </Text>
+        </View>
+      </ScrollView>
+    );
+  }
+
+  // --- SCREEN 4: ASSESSMENT (Your Existing Questionnaire) ---
   return (
     <View style={{ flex: 1 }}>
       <ScrollView style={styles.container}>
         {!result ? (
           <View>
+            <TouchableOpacity
+              onPress={() => setIsDashboardVisible(true)}
+              style={{ marginBottom: 10 }}
+            >
+              <Text style={styles.backLink}>← Back to Dashboard</Text>
+            </TouchableOpacity>
             <Text style={styles.mainTitle}>🔬 HIV Prevention Assessment</Text>
             <View style={styles.card}>
               <Text style={styles.sectionHeader}>🌍 Language & Culture</Text>
@@ -252,8 +431,26 @@ export default function App() {
           <View style={styles.resultView}>
             <TouchableOpacity
               onPress={() => {
-                setResult(null);
-                setResultPage(1);
+                // If we are looking at a fresh result, go back to questions
+                // If we came from Dashboard (History Mode), go back to Dashboard
+                if (result?.isHistoryMode) {
+                  setResult(null);
+                  setIsDashboardVisible(true);
+                } else if (resultPage === 1) {
+                  // If on page 1, go back to questions
+                  setResult(null);
+                } else if (resultPage === 2) {
+                  // If on page 2, go back to page 1
+                  setResultPage(1);
+                } else if (resultPage === 3) {
+                  // If on page 3 and not in history mode, go back to page 2
+                  if (!result?.isHistoryMode) {
+                    setResultPage(2);
+                  } else {
+                    setResult(null);
+                    setIsDashboardVisible(true);
+                  }
+                }
               }}
             >
               <Text style={styles.backLink}>← Back</Text>
@@ -265,14 +462,13 @@ export default function App() {
                 <View style={styles.disclaimerCard}>
                   <Text style={styles.disclaimerText}>
                     <Text style={{ fontWeight: 'bold' }}>Clinical Note: </Text>
-                    This behavioral risk profile is designed to identify
-                    patterns associated with HIV transmission and is{' '}
+                    This behavioral risk profile is intended to support
+                    HIV-prevention and risk-reduction planning and is{' '}
                     <Text style={{ fontWeight: 'bold' }}>
                       not a medical diagnosis
                     </Text>
-                    . These results are intended for counseling and screening
-                    purposes only. Please speak with your healthcare provider to
-                    arrange a clinical HIV test for a definitive diagnosis.
+                    . Please speak with your healthcare provider to arrange a
+                    clinical HIV test for a definitive diagnosis.
                   </Text>
                 </View>
 
@@ -451,33 +647,41 @@ export default function App() {
                 <Text style={styles.resultMainTitle}>
                   Longitudinal Risk Progress
                 </Text>
-                <RiskTrendScreen userId="research_user_001" />
+                <RiskTrendScreen userId={currentUser.id} />
 
-                <TouchableOpacity
-                  style={[
-                    styles.button,
-                    { backgroundColor: '#10B981', marginTop: 10 },
-                  ]}
-                  onPress={createPDF}
-                >
-                  <Text style={styles.buttonText}>💾 SAVE AS PDF SUMMARY</Text>
-                </TouchableOpacity>
+                {/* Only show PDF button if it's a fresh result, not history mode */}
+                {!result?.isHistoryMode && (
+                  <TouchableOpacity
+                    style={[
+                      styles.button,
+                      { backgroundColor: '#10B981', marginTop: 10 },
+                    ]}
+                    onPress={createPDF}
+                  >
+                    <Text style={styles.buttonText}>
+                      💾 SAVE AS PDF SUMMARY
+                    </Text>
+                  </TouchableOpacity>
+                )}
 
-                <TouchableOpacity
-                  style={[styles.button, { backgroundColor: '#6B7280' }]}
-                  onPress={() => setResultPage(2)}
-                >
-                  <Text style={styles.buttonText}>← BACK TO PLAN</Text>
-                </TouchableOpacity>
+                {/* Change the BACK TO PLAN button logic */}
+                {!result?.isHistoryMode && (
+                  <TouchableOpacity
+                    style={[styles.button, { backgroundColor: '#6B7280' }]}
+                    onPress={() => setResultPage(2)}
+                  >
+                    <Text style={styles.buttonText}>← BACK TO PLAN</Text>
+                  </TouchableOpacity>
+                )}
 
                 <TouchableOpacity
                   style={styles.button}
                   onPress={() => {
                     setResult(null);
-                    setResultPage(1);
+                    setIsDashboardVisible(true);
                   }}
                 >
-                  <Text style={styles.buttonText}>RESTART ASSESSMENT</Text>
+                  <Text style={styles.buttonText}>RETURN TO DASHBOARD</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -503,6 +707,77 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  loginContainer: {
+    flex: 1,
+    backgroundColor: '#FFF',
+    justifyContent: 'center',
+    padding: 30,
+  },
+  loginHeader: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#1E3A8A',
+    marginBottom: 5,
+  },
+  loginSub: { fontSize: 16, color: '#6B7280', marginBottom: 30 },
+  input: {
+    backgroundColor: '#F3F4F6',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 15,
+    color: '#333',
+  },
+  loginButton: {
+    backgroundColor: '#1E3A8A',
+    padding: 18,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  loginButtonText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+
+  dashboardContainer: { flex: 1, backgroundColor: '#F8F9FB', padding: 20 },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 40,
+    marginBottom: 30,
+  },
+  dashWelcome: { fontSize: 16, color: '#6B7280' },
+  dashName: { fontSize: 24, fontWeight: 'bold', color: '#1A1C1E' },
+  notifBadge: {
+    backgroundColor: '#EF4444',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dashSectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 15,
+  },
+  quickActionGrid: { flexDirection: 'row', justifyContent: 'space-between' },
+  actionBox: {
+    backgroundColor: '#FFF',
+    width: '48%',
+    padding: 20,
+    borderRadius: 15,
+    alignItems: 'center',
+    elevation: 3,
+  },
+  actionEmoji: { fontSize: 30, marginBottom: 10 },
+  actionText: { fontWeight: '600', color: '#4B5563' },
+  infoCard: {
+    backgroundColor: '#DBEAFE',
+    padding: 20,
+    borderRadius: 15,
+    marginTop: 30,
+  },
+  infoTitle: { fontWeight: 'bold', color: '#1E40AF', marginBottom: 5 },
+  infoText: { color: '#1E40AF', lineHeight: 20 },
   container: { flex: 1, backgroundColor: '#F8F9FB', padding: 15 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
@@ -732,5 +1007,45 @@ const styles = StyleSheet.create({
     marginTop: 5,
     fontSize: 14,
     color: '#6B7280',
+  },
+  welcomeContainer: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 30,
+  },
+  emojiTitle: {
+    fontSize: 36,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  welcomeTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1E3A8A', // Deep medical blue
+    textAlign: 'center',
+    marginTop: 25,
+  },
+  welcomeSubtitle: {
+    fontSize: 15,
+    color: '#4B5563',
+    textAlign: 'center',
+    marginTop: 15,
+    lineHeight: 22,
+  },
+  welcomeNoteBox: {
+    marginTop: 40,
+    padding: 15,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#9CA3AF',
+  },
+  welcomeNote: {
+    fontSize: 13,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 18,
   },
 });

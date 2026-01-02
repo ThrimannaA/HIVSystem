@@ -61,6 +61,39 @@ class BatchInput(BaseModel):
     users: List[Dict[str, Any]]
 
 # API Endpoints
+# Add this endpoint to your api.py
+@app.post("/login")
+def login_user(payload: dict):
+    try:
+        p_id = payload.get("patient_id") # e.g., research_user_001
+        code = payload.get("access_code") # e.g., 1234
+        
+        # Pulls the document from /users/research_user_001
+        user_ref = db.collection("users").document(p_id).get()
+        
+        if not user_ref.exists:
+            raise HTTPException(
+                status_code=404, 
+                detail="Invalid Patient ID. Please check your credentials or contact the clinical administrator."
+            )
+                    
+        user_data = user_ref.to_dict()
+        
+        # Check if code matches
+        if str(user_data.get("access_code")) == str(code):
+            return {
+                "success": True,
+                "name": user_data.get("name"),
+                "patient_id": p_id
+            }
+        else:
+            raise HTTPException(
+                status_code=401, 
+                detail="The Access Code entered is incorrect. Please try again."
+            )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="An internal server error occurred. Please try again later.")
+    
 @app.get("/")
 def root():
     return {"status": "HIV Prevention API Running", "version": "1.0"}
@@ -100,30 +133,23 @@ def get_schema():
     
 @app.post("/assess")
 def assess_risk(user_input: UserInput):
-    """Single user assessment - using your existing backend.process_user()"""
     if not system:
         raise HTTPException(status_code=503, detail="Backend not initialized")
-    
     try:
-        # Prepare input for your existing backend
         input_data = user_input.data.copy()
-        
-        # Add language/culture if provided
-        if user_input.preferred_language:
-            input_data['preferred_language'] = user_input.preferred_language
-        if user_input.preferred_culture:
-            input_data['preferred_culture'] = user_input.preferred_culture
-        
-        # Call your EXISTING backend - NO CHANGES NEEDED
+        # Ensure your backend receives clean data
         result = system.process_user(input_data)
         
+        # Log the result to your terminal so you can see the structure
+        print(f"DEBUG: Backend Result: {result}") 
+
         return {
             "success": True,
-            "result": result,
-            "timestamp": result.get("timestamp")
+            "result": result
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Assessment failed: {str(e)}")
+        print(f"ERROR in /assess: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/assess/batch")
 def assess_batch(batch_input: BatchInput):
@@ -154,20 +180,49 @@ def get_supported_languages():
         ]
     }
 
+# @app.post("/save_assessment")
+# def save_assessment(payload: dict):
+#     """Saves the risk score to Firebase for trend analysis"""
+#     try:
+#         user_id = payload.get("user_id", "default_user")
+#         doc_ref = db.collection("users").document(user_id).collection("history").document()
+        
+#         doc_ref.set({
+#             "score": payload["score"],
+#             "level": payload["level"],
+#             "timestamp": datetime.now(),
+#         })
+#         return {"success": True}
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
 @app.post("/save_assessment")
 def save_assessment(payload: dict):
-    """Saves the risk score to Firebase for trend analysis"""
     try:
-        user_id = payload.get("user_id", "default_user")
-        doc_ref = db.collection("users").document(user_id).collection("history").document()
+        user_id = payload.get("user_id")
+        # We take the text level (e.g., "Low Risk")
+        level_text = payload.get("level", "Low Risk")
         
+        # Clean the string for the mapping
+        clean_level = level_text.replace(" Risk", "")
+        
+        stage_map = {
+            "Low": 1,
+            "Moderate": 2,
+            "High": 3,
+            "Very High": 4
+        }
+        numeric_score = stage_map.get(clean_level, 1)
+
+        doc_ref = db.collection("users").document(user_id).collection("history").document()
         doc_ref.set({
-            "score": payload["score"],
-            "level": payload["level"],
+            "score": numeric_score, # This fixes your 400-scale issue
+            "risk_level": level_text,
+            "date": datetime.now().isoformat().split('T')[0], # Adds the date for RiskTrendScreen
             "timestamp": datetime.now(),
         })
         return {"success": True}
     except Exception as e:
+        print(f"ERROR in /save_assessment: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/history/{user_id}")
