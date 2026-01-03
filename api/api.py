@@ -1,6 +1,6 @@
 """
 FastAPI wrapper for existing HIV Prevention Backend
-Does NOT modify existing backend files
+Does NOT backend files
 """
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -242,7 +242,42 @@ def get_history(user_id: str):
         return history
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+from fastapi import HTTPException
+
+@app.patch("/update_profile/{user_id}/")
+async def update_profile(user_id: str, payload: dict):
+    try:
+        # 1. Reference the specific user document
+        user_ref = db.collection("users").document(user_id)
+        
+        # 2. Build the update dictionary dynamically
+        update_data = {}
+        
+        # If 'name' was sent in the request, add it to update_data
+        if "name" in payload and payload["name"]:
+            update_data["name"] = payload["name"]
+            
+        # If 'access_code' was sent in the request, add it to update_data
+        if "access_code" in payload and payload["access_code"]:
+            update_data["access_code"] = payload["access_code"]
+
+        # 3. If no data was provided, return an error
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No valid data provided to update")
+
+        # 4. Perform the update in Firestore
+        user_ref.update(update_data)
+        
+        return {
+            "success": True, 
+            "message": f"Updated fields: {list(update_data.keys())}"
+        }
+        
+    except Exception as e:
+        print(f"Update Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+ 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
