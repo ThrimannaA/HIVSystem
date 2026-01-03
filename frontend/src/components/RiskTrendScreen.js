@@ -180,19 +180,20 @@ export const RiskTrendScreen = ({ userId }) => {
             <LineChart
               data={history}
               height={220}
-              width={Dimensions.get('window').width - 80}
+              width={Dimensions.get('window').width - 100}
               initialSpacing={30}
               spacing={Math.max(
-                45,
-                (Dimensions.get('window').width - 150) / history.length,
+                50,
+                (Dimensions.get('window').width - 160) /
+                  (history.length > 1 ? history.length : 1),
               )}
-              endSpacing={20}
-              color="#6366F1"
+              endSpacing={30}
+              color="#080ce2ff"
               thickness={3}
               curved={history.length > 1}
               noOfSections={4}
-              maxValue={4.2}
-              minValue={0.8}
+              maxValue={4.5}
+              minValue={0}
               yAxisOffset={0.5}
               yAxisLabelTexts={[
                 '',
