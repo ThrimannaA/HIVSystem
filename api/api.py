@@ -1,6 +1,6 @@
 """
 FastAPI wrapper for existing HIV Prevention Backend
-Does NOT backend files
+Does NOT backend files - APi endpoints for connecting with Firebase database
 """
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -182,49 +182,73 @@ def get_supported_languages():
 
 # @app.post("/save_assessment")
 # def save_assessment(payload: dict):
-#     """Saves the risk score to Firebase for trend analysis"""
 #     try:
-#         user_id = payload.get("user_id", "default_user")
-#         doc_ref = db.collection("users").document(user_id).collection("history").document()
+#         user_id = payload.get("user_id")
+#         # We take the text level (e.g., "Low Risk")
+#         level_text = payload.get("level", "Low Risk")
         
+#         # Clean the string for the mapping
+#         clean_level = level_text.replace(" Risk", "")
+        
+#         stage_map = {
+#             "Low": 1,
+#             "Moderate": 2,
+#             "High": 3,
+#             "Very High": 4
+#         }
+#         numeric_score = stage_map.get(clean_level, 1)
+
+#         doc_ref = db.collection("users").document(user_id).collection("history").document()
 #         doc_ref.set({
-#             "score": payload["score"],
-#             "level": payload["level"],
+#             "score": numeric_score, # This fixes your 400-scale issue
+#             "risk_level": level_text,
+#             "date": datetime.now().isoformat().split('T')[0], # Adds the date for RiskTrendScreen
 #             "timestamp": datetime.now(),
 #         })
 #         return {"success": True}
 #     except Exception as e:
+#         print(f"ERROR in /save_assessment: {str(e)}")
 #         raise HTTPException(status_code=500, detail=str(e))
 @app.post("/save_assessment")
 def save_assessment(payload: dict):
     try:
         user_id = payload.get("user_id")
-        # We take the text level (e.g., "Low Risk")
-        level_text = payload.get("level", "Low Risk")
+        # 'full_result' will be the entire object returned by the /assess endpoint
+        full_result = payload.get("full_result") 
         
-        # Clean the string for the mapping
+        if not full_result:
+             raise HTTPException(status_code=400, detail="No assessment data provided")
+
+        # Extract bits for the quick-view (history chart)
+        level_text = full_result["risk_prediction"]["risk_level"]
+        
+        stage_map = {"Low": 1, "Moderate": 2, "High": 3, "Very High": 4}
         clean_level = level_text.replace(" Risk", "")
-        
-        stage_map = {
-            "Low": 1,
-            "Moderate": 2,
-            "High": 3,
-            "Very High": 4
-        }
         numeric_score = stage_map.get(clean_level, 1)
 
+        # Reference to the subcollection 'history'
         doc_ref = db.collection("users").document(user_id).collection("history").document()
+        
+        # SAVE EVERYTHING:
         doc_ref.set({
-            "score": numeric_score, # This fixes your 400-scale issue
+            # Basic Trend Data
+            "score": numeric_score,
             "risk_level": level_text,
-            "date": datetime.now().isoformat().split('T')[0], # Adds the date for RiskTrendScreen
             "timestamp": datetime.now(),
+            "date": datetime.now().isoformat().split('T')[0],
+            
+            # Full Clinical Depth
+            "analysis_strength": full_result["risk_prediction"].get("confidence_percentage", "Standard"),
+            "top_risk_factors": full_result["risk_prediction"]["personalized_factors"],
+            "intervention_plan": full_result["intervention_plan"], 
+            "raw_answers": payload.get("form_data") # Optional: save what the user actually clicked
         })
-        return {"success": True}
+        
+        return {"success": True, "doc_id": doc_ref.id}
     except Exception as e:
-        print(f"ERROR in /save_assessment: {str(e)}")
+        print(f"Detailed Save Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-
+        
 @app.get("/history/{user_id}")
 def get_history(user_id: str):
     """Retrieves all past scores for the line chart"""
