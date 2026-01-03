@@ -17,12 +17,12 @@
         },
         "raceeth": {
             "question": "Race/Ethnicity (computed)",
-            "options": {"1": "Am Indian/Alaska Native", "2": "Asian", "3": "Black/African American", 
-                      "4": "Native Hawaiian/Other PI", "5": "White", "6": "Hispanic/Latino", 
-                      "7": "Multiple - Hispanic", "8": "Multiple - Non-Hispanic"},
+            "options": {"1": "Sri Lankan Tamil", "2": "Indian Tamil", "3": "Other / Mixed", 
+                      "4": "Sri Lankan Moor (Muslim)", "5": "Burgher", "6": "Malay", 
+                      "7": "Sinhala", "8": "Multiple ethnicities"},
             "risk_direction": "neutral",
             "category": "demographics",
-            "explanation": "Race and ethnicity reflect structural and access-related disparities; differences in HIV rates are due to systemic factors not individual risk behaviors"
+            "explanation": "Ethnicity is used only as a proxy for social and structural factors such as healthcare access, education, migration status, and economic vulnerability. Any variation in HIV risk reflects these systemic conditions rather than ethnicity itself"
         },
         "q65": {
             "question": "Are you transgender?",
