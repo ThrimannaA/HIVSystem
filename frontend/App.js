@@ -162,14 +162,14 @@ export default function App() {
       setResult(response);
       setResultPage(1);
 
-      // UPDATED SAVE CALL: Send the whole response object
+      // This call sends EVERYTHING to the Python backend
       await fetch(`${BASE_URL}/save_assessment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_id: currentUser.id,
-          full_result: response, // This contains all the intervention plans and factors
-          form_data: formData, // Optional: saves their answers too
+          full_result: response,
+          form_data: formData,
         }),
       });
     } catch (e) {
@@ -759,12 +759,17 @@ export default function App() {
                     <Text
                       style={[
                         appStyles.intTitle,
-                        { color: '#2196F3', fontWeight: 'bold' },
+                        { color: '#032d4fff', fontWeight: 'bold' },
                       ]}
                     >
                       {i + 1}. {item.name}
-                      <Text style={{ color: '#666', fontWeight: 'normal' }}>
-                        {' '}
+                      <Text
+                        style={{
+                          color: '#032d4fff',
+                          fontWeight: 'normal',
+                          fontSize: 14,
+                        }}
+                      >
                         (Week {item.start_week}-{item.end_week})
                       </Text>
                     </Text>

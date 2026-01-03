@@ -213,40 +213,48 @@ def get_supported_languages():
 def save_assessment(payload: dict):
     try:
         user_id = payload.get("user_id")
-        # 'full_result' will be the entire object returned by the /assess endpoint
-        full_result = payload.get("full_result") 
+        full_result = payload.get("full_result")
+        form_data = payload.get("form_data")
         
         if not full_result:
-             raise HTTPException(status_code=400, detail="No assessment data provided")
+            raise HTTPException(status_code=400, detail="Missing data")
 
-        # Extract bits for the quick-view (history chart)
+        # 1. Map Numeric Score for the Trend Chart
         level_text = full_result["risk_prediction"]["risk_level"]
-        
-        stage_map = {"Low": 1, "Moderate": 2, "High": 3, "Very High": 4}
         clean_level = level_text.replace(" Risk", "")
+        stage_map = {"Low": 1, "Moderate": 2, "High": 3, "Very High": 4}
         numeric_score = stage_map.get(clean_level, 1)
 
-        # Reference to the subcollection 'history'
+        # 2. Reference the 'history' subcollection
         doc_ref = db.collection("users").document(user_id).collection("history").document()
         
-        # SAVE EVERYTHING:
-        doc_ref.set({
-            # Basic Trend Data
-            "score": numeric_score,
-            "risk_level": level_text,
-            "timestamp": datetime.now(),
-            "date": datetime.now().isoformat().split('T')[0],
-            
-            # Full Clinical Depth
-            "analysis_strength": full_result["risk_prediction"].get("confidence_percentage", "Standard"),
-            "top_risk_factors": full_result["risk_prediction"]["personalized_factors"],
-            "intervention_plan": full_result["intervention_plan"], 
-            "raw_answers": payload.get("form_data") # Optional: save what the user actually clicked
-        })
+        # 3. Create a clean dictionary (This prevents "Snapshot" views)
+        clinical_record = {
+            "metadata": {
+                "timestamp": datetime.now(),
+                "date_string": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "app_version": "1.0"
+            },
+            "summary": {
+                "score": numeric_score,
+                "risk_level": level_text,
+                "analysis_strength": full_result["risk_prediction"].get("confidence_percentage", "Standard"),
+            },
+            "clinical_details": {
+                "top_risk_factors": full_result["risk_prediction"]["personalized_factors"],
+                "intervention_plan": full_result["intervention_plan"]["personalized_plan"],
+                "plan_rationale": full_result["intervention_plan"]["plan_summary"],
+                "expected_outcomes": full_result["intervention_plan"]["expected_outcomes"]
+            },
+            "raw_input_data": form_data  # Saves the actual questions/answers
+        }
+
+        # 4. Save to Firestore
+        doc_ref.set(clinical_record)
         
-        return {"success": True, "doc_id": doc_ref.id}
+        return {"success": True, "assessment_id": doc_ref.id}
     except Exception as e:
-        print(f"Detailed Save Error: {str(e)}")
+        print(f"Firestore Save Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
         
 @app.get("/history/{user_id}")
