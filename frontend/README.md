@@ -2,6 +2,13 @@
 
 This is an [**Expo**](https://expo.dev) project for HIV Risk Awareness and Prevention.
 
+## Supported Platforms
+
+This app supports multiple platforms:
+- **iOS** - Native app via Expo Go or production build
+- **Android** - Native app via Expo Go or production build  
+- **Web** - Browser-based version using `react-native-web`
+
 ## Getting Started
 
 ### Prerequisites
