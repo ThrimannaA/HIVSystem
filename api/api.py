@@ -13,11 +13,35 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 from datetime import datetime
 
-# 1. Initialize Firebase (Ensure serviceAccountKey.json is in your api folder)
-# You get this file from Firebase Console > Project Settings > Service Accounts
-cred = credentials.Certificate(os.path.join(os.path.dirname(__file__), "serviceAccountKey.json"))
-firebase_admin.initialize_app(cred)
-db = firestore.client()
+# 1. Initialize Firebase (service account via env var or file)
+# You can provide the service account JSON path via the SERVICE_ACCOUNT_KEY
+# or GOOGLE_APPLICATION_CREDENTIALS environment variables, or place
+# serviceAccountKey.json in this `api/` folder.
+db = None
+sa_default = os.path.join(os.path.dirname(__file__), "serviceAccountKey.json")
+sa_path = os.environ.get("SERVICE_ACCOUNT_KEY") or os.environ.get("GOOGLE_APPLICATION_CREDENTIALS") or sa_default
+
+try:
+    if os.path.exists(sa_path):
+        cred = credentials.Certificate(sa_path)
+        firebase_admin.initialize_app(cred)
+        print(f"✅ Firebase initialized using service account: {sa_path}")
+    else:
+        # Try application-default credentials as a fallback
+        try:
+            firebase_admin.initialize_app()
+            print("✅ Firebase initialized using application default credentials")
+        except Exception:
+            print(f"⚠️ Firebase credentials not found. Provide SERVICE_ACCOUNT_KEY or place serviceAccountKey.json at {sa_default}")
+
+    # Only create a client if an app was initialized
+    if getattr(firebase_admin, '_apps', None):
+        db = firestore.client()
+    else:
+        db = None
+except Exception as e:
+    print(f"⚠️ Firebase initialization failed: {e}")
+    db = None
 
 # Add backend to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

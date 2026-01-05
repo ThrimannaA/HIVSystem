@@ -207,3 +207,17 @@ marimo/_lsp/
 __marimo__/
 
 api/serviceAccountKey.json
+
+# Environment & secrets
+backend/env/
+backend/firebase-credentials*.json
+
+# Python
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+
+# Models
+*.pkl
