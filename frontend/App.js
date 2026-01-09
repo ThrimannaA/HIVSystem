@@ -148,21 +148,48 @@ export default function App() {
   };
 
   const runAssessment = async () => {
+    const BASE_URL = 'https://keely-unresourceful-streamingly.ngrok-free.dev';
+
+    // --- NEW VALIDATION BLOCK ---
+    // Count how many questions have been answered (value is not -1)
+    const totalQuestions = Object.keys(formData).length;
+    const answeredCount = Object.values(formData).filter(v => v !== -1).length;
+
+    if (answeredCount < totalQuestions) {
+      const missing = totalQuestions - answeredCount;
+      Alert.alert(
+        'Incomplete Assessment',
+        `Please answer all questions before proceeding. You have ${missing} ${
+          missing === 1 ? 'question' : 'questions'
+        } left to answer.`,
+        [{ text: 'OK' }],
+      );
+      return; // Stop the function here
+    }
+    // --- END VALIDATION BLOCK ---
+
     if (loading) return;
     setLoading(true);
 
-    const selected = languageCultureMap[prefLanguage];
+    let response;
     try {
-      const response = await HIVApi.assessRisk(
+      const selected = languageCultureMap[prefLanguage];
+      // 1. Run the AI Assessment
+      response = await HIVApi.assessRisk(
         formData,
         selected.code,
         selected.culture,
       );
-
       setResult(response);
       setResultPage(1);
+    } catch (e) {
+      setLoading(false);
+      Alert.alert('Assessment Failed', 'Could not reach the AI engine.');
+      return; // Stop here if the AI fails
+    }
 
-      // This call sends EVERYTHING to the Python backend
+    // 2. Try to save and update history quietly in the background
+    try {
       await fetch(`${BASE_URL}/save_assessment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -172,9 +199,16 @@ export default function App() {
           form_data: formData,
         }),
       });
+
+      const updatedHistory = await HIVApi.getHistory(currentUser.id);
+      if (updatedHistory) {
+        setHistoryData(updatedHistory);
+      }
     } catch (e) {
-      Alert.alert('Assessment Failed', 'Check server connection.');
+      console.log('Background save/fetch error:', e);
+      // We don't alert the user here because the assessment itself was successful
     }
+
     setLoading(false);
   };
 
@@ -843,7 +877,7 @@ export default function App() {
                     onPress={createPDF}
                   >
                     <Text style={appStyles.buttonText}>
-                      💾 SAVE AS PDF SUMMARY
+                      💾 SAVE REPORT AS A PDF
                     </Text>
                   </TouchableOpacity>
                 )}

@@ -106,9 +106,9 @@ export const RiskTrendScreen = ({ userId }) => {
         // Calculate trend
         let trend = 0;
         if (apiData.length >= 2) {
-          const firstValue = apiData[0].value;
+          const previousValue = apiData[apiData.length - 2].value;
           const lastValue = apiData[apiData.length - 1].value;
-          trend = lastValue - firstValue;
+          trend = lastValue - previousValue;
         }
 
         setSummary({
@@ -356,7 +356,7 @@ export const RiskTrendScreen = ({ userId }) => {
                   ? '↗ Higher Risk'
                   : '➡ Stable'}
               </Text>
-              <Text style={riskTrendStyles.summaryLabel}>Overall Trend</Text>
+              <Text style={riskTrendStyles.summaryLabel}>Your Progress</Text>
             </View>
           </View>
         </View>

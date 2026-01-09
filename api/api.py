@@ -1,6 +1,6 @@
 """
 FastAPI wrapper for existing HIV Prevention Backend
-Does NOT backend files - APi endpoints for connecting with Firebase database
+Does NOT backend files - APi endpoints for connecting with Firebase database (backend.py - which includes other existing backend files like llm_planner.py are all connected to this api.py)
 """
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -137,16 +137,23 @@ def assess_risk(user_input: UserInput):
         raise HTTPException(status_code=503, detail="Backend not initialized")
     try:
         input_data = user_input.data.copy()
-        # Ensure your backend receives clean data
+        
+        # The error happens here. Let's make it flexible:
         result = system.process_user(input_data)
         
-        # Log the result to your terminal so you can see the structure
+        # If your backend returns a tuple like (risk_results, intervention_plan)
+        # but you are getting an error, print it to see what's inside:
+        print(f"DEBUG: Result Type: {type(result)}")
         print(f"DEBUG: Backend Result: {result}") 
 
         return {
             "success": True,
-            "result": result
+            "result": result  # Send the whole object back to React Native
         }
+    except ValueError as ve:
+        print(f"UNPACKING ERROR: {str(ve)}")
+        # This usually means system.process_user() returned 3 items instead of 2
+        raise HTTPException(status_code=500, detail="Data structure mismatch in backend")
     except Exception as e:
         print(f"ERROR in /assess: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -259,20 +266,42 @@ def save_assessment(payload: dict):
         
 @app.get("/history/{user_id}")
 def get_history(user_id: str):
-    """Retrieves all past scores for the line chart"""
+    """Retrieves past scores for the line chart with nested field support"""
     try:
+        # We must order by the nested metadata timestamp
         docs = db.collection("users").document(user_id).collection("history")\
-                 .order_by("timestamp", direction=firestore.Query.ASCENDING).stream()
+                 .order_by("metadata.timestamp", direction=firestore.Query.ASCENDING).stream()
         
         history = []
         for doc in docs:
             data = doc.to_dict()
-            history.append({
-                "value": data["score"],
-                "label": data["timestamp"].strftime("%b %d"), # Format: Dec 30
-            })
+            
+            # --- EXTRACT SCORE ---
+            # Try new structure first, then fallback to old top-level field
+            summary = data.get("summary", {})
+            score = summary.get("score") if isinstance(summary, dict) else None
+            if score is None:
+                score = data.get("score", 0) # Fallback for old documents
+            
+            # --- EXTRACT TIMESTAMP ---
+            metadata = data.get("metadata", {})
+            ts = None
+            if isinstance(metadata, dict) and "timestamp" in metadata:
+                ts = metadata["timestamp"]
+            else:
+                ts = data.get("timestamp") # Fallback for old documents
+
+            # Only add to history if we found a valid timestamp
+            if ts:
+                history.append({
+                    "value": score,
+                    "label": ts.strftime("%b %d"), # e.g., "Jan 05"
+                    "full_date": ts.isoformat()    # Useful for sorting/debugging
+                })
+        
         return history
     except Exception as e:
+        print(f"Detailed History Fetch Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 from fastapi import HTTPException

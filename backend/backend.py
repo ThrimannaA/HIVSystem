@@ -1,5 +1,5 @@
 """
-HIV Prevention Backend - True Personalization Engine
+HIV Prevention Backend - True Personalization Engine (All llm_planner.py , plan_adaptor.py and scoring_system.py are connected to this backend.py)
 """
 
 import numpy as np
@@ -897,4 +897,3 @@ class HIVPreventionSystem:
             "personalization_rate": len(truly_personalized) / len(same_stage_comparisons) if same_stage_comparisons else 0,
             "analysis": f"{len(truly_personalized)}/{len(same_stage_comparisons)} same-stage users got different plans"
         }
-
