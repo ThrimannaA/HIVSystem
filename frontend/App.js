@@ -9,7 +9,7 @@ import {
   TextInput,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import RNPrint from 'react-native-print';
+import * as Print from 'expo-print';
 import { HIVApi } from './src/api/client';
 import { RiskTrendScreen } from './src/components/RiskTrendScreen';
 import appStyles from './src/styles/appStyles';
@@ -302,7 +302,7 @@ export default function App() {
     `;
 
     try {
-      await RNPrint.print({ html: htmlContent });
+      await Print.printAsync({ html: htmlContent });
     } catch (error) {
       console.error(error);
       Alert.alert('Error', 'Failed to generate PDF');
